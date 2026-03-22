@@ -1,0 +1,129 @@
+import tkinter as tk
+import time
+from devices.end_device import EndDevice
+from devices.hub import Hub
+from devices.switch import Switch
+from utils.packet import Packet
+
+
+class NetworkUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Network Simulator")
+
+        self.canvas = tk.Canvas(root, width=800, height=500, bg="white")
+        self.canvas.pack()
+
+        self.output = tk.Text(root, height=10)
+        self.output.pack()
+
+        self.create_buttons()
+
+    def log(self, msg):
+        self.output.insert(tk.END, msg + "\n")
+        self.output.see(tk.END)
+
+    def draw_node(self, x, y, name, color="lightblue"):
+        self.canvas.create_oval(x, y, x+40, y+40, fill=color)
+        self.canvas.create_text(x+20, y+20, text=name)
+
+    def draw_line(self, x1, y1, x2, y2):
+        self.canvas.create_line(x1, y1, x2, y2)
+
+    # 🔥 ANIMATION FUNCTION
+    def animate_packet(self, x1, y1, x2, y2):
+        packet = self.canvas.create_oval(x1, y1, x1+10, y1+10, fill="red")
+
+        steps = 20
+        dx = (x2 - x1) / steps
+        dy = (y2 - y1) / steps
+
+        for _ in range(steps):
+            self.canvas.move(packet, dx, dy)
+            self.root.update()
+            time.sleep(0.05)
+
+        self.canvas.delete(packet)
+
+    def create_buttons(self):
+        frame = tk.Frame(self.root)
+        frame.pack()
+
+        tk.Button(frame, text="Test Hub", command=self.test_hub).pack(side="left")
+        tk.Button(frame, text="Test Switch", command=self.test_switch).pack(side="left")
+
+    # =========================
+    # HUB TEST
+    # =========================
+    def test_hub(self):
+        self.canvas.delete("all")
+        self.output.delete(1.0, tk.END)
+
+        hub = Hub("Hub1")
+        devices = [EndDevice(f"D{i}") for i in range(5)]
+
+        self.draw_node(350, 200, "Hub", "orange")
+
+        positions = [(100, 100), (600, 100), (100, 350), (600, 350), (350, 400)]
+
+        for i, d in enumerate(devices):
+            hub.connect(d)
+            x, y = positions[i]
+            self.draw_node(x, y, d.name)
+            self.draw_line(370, 220, x+20, y+20)
+
+        packet = Packet("D0", "D3", "Hello")
+
+        self.log("Sending via Hub...")
+
+        # 🔥 Animation
+        sx, sy = positions[0]
+        dx, dy = positions[3]
+
+        self.animate_packet(sx+20, sy+20, 370, 220)  # to hub
+        self.animate_packet(370, 220, dx+20, dy+20)  # to destination
+
+        devices[0].send(packet)
+
+        self.log("Delivered to D3")
+
+    # =========================
+    # SWITCH TEST
+    # =========================
+    def test_switch(self):
+        self.canvas.delete("all")
+        self.output.delete(1.0, tk.END)
+
+        switch = Switch("Switch1")
+        devices = [EndDevice(f"S{i}") for i in range(5)]
+
+        self.draw_node(350, 200, "Switch", "green")
+
+        positions = [(100, 100), (600, 100), (100, 350), (600, 350), (350, 400)]
+
+        for i, d in enumerate(devices):
+            switch.connect(d)
+            x, y = positions[i]
+            self.draw_node(x, y, d.name)
+            self.draw_line(370, 220, x+20, y+20)
+
+        packet = Packet("S0", "S4", "Hello")
+
+        self.log("Sending via Switch...")
+
+        sx, sy = positions[0]
+        dx, dy = positions[4]
+
+        # animation
+        self.animate_packet(sx+20, sy+20, 370, 220)
+        self.animate_packet(370, 220, dx+20, dy+20)
+
+        switch.receive(packet, devices[0])
+
+        self.log("Delivered to S4")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = NetworkUI(root)
+    root.mainloop()
