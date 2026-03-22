@@ -6,11 +6,11 @@ class EndDevice:
         self.switch = None
 
     def connect(self, connection):
-        self.connection = connection
+        self.connection = connection     #Connect device to wire
         connection.connect(self)
 
     def send(self, packet):
-        print(f"{self.name} sending {packet}")
+        print(f"{self.name} sending {packet}")      #Device starts transmission
 
         if self.hub:
             self.hub.receive(packet, self)
@@ -23,4 +23,4 @@ class EndDevice:
 
     def receive(self, packet):
         if packet.dest == self.name:
-            print(f"{self.name} received: {packet.data}")
+            print(f"{self.name} received: {packet.data}")   #Device accepts only its own data

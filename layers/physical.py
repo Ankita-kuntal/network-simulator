@@ -1,5 +1,5 @@
 class Connection:
-    def __init__(self):
+    def __init__(self):      #This represents a cable/wire, It stores all connected devices
         self.devices = []
 
     def connect(self, device):
