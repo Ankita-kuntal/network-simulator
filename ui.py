@@ -14,15 +14,21 @@ class NetworkUI:
         self.canvas = tk.Canvas(root, width=800, height=500, bg="white")
         self.canvas.pack()
 
-        self.output = tk.Text(root, height=10)
+        self.output = tk.Text(root, height=12)
         self.output.pack()
 
         self.create_buttons()
 
+    # =========================
+    # LOG FUNCTION
+    # =========================
     def log(self, msg):
         self.output.insert(tk.END, msg + "\n")
         self.output.see(tk.END)
 
+    # =========================
+    # DRAWING FUNCTIONS
+    # =========================
     def draw_node(self, x, y, name, color="lightblue"):
         self.canvas.create_oval(x, y, x+40, y+40, fill=color)
         self.canvas.create_text(x+20, y+20, text=name)
@@ -30,7 +36,9 @@ class NetworkUI:
     def draw_line(self, x1, y1, x2, y2):
         self.canvas.create_line(x1, y1, x2, y2)
 
-    # 🔥 ANIMATION FUNCTION
+    # =========================
+    # PACKET ANIMATION
+    # =========================
     def animate_packet(self, x1, y1, x2, y2):
         packet = self.canvas.create_oval(x1, y1, x1+10, y1+10, fill="red")
 
@@ -45,6 +53,9 @@ class NetworkUI:
 
         self.canvas.delete(packet)
 
+    # =========================
+    # BUTTONS
+    # =========================
     def create_buttons(self):
         frame = tk.Frame(self.root)
         frame.pack()
@@ -53,9 +64,11 @@ class NetworkUI:
         tk.Button(frame, text="Test Switch", command=self.test_switch).pack(side="left")
 
     # =========================
-    # HUB TEST
+    # HUB TEST (UPDATED)
     # =========================
     def test_hub(self):
+        from protocols.noise import add_noise
+
         self.canvas.delete("all")
         self.output.delete(1.0, tk.END)
 
@@ -74,23 +87,33 @@ class NetworkUI:
 
         packet = Packet("D0", "D3", "Hello")
 
-        self.log("Sending via Hub...")
+        # 🔥 ADD-ONS
+        binary = packet.to_binary()
+        noisy_data = add_noise(packet.data)
 
-        # 🔥 Animation
+        self.log("=== HUB TRANSMISSION ===")
+        self.log(f"Original Data: {packet.data}")
+        self.log(f"Binary: {binary}")
+        self.log(f"After Noise: {noisy_data}")
+
+        # animation
         sx, sy = positions[0]
         dx, dy = positions[3]
 
-        self.animate_packet(sx+20, sy+20, 370, 220)  # to hub
-        self.animate_packet(370, 220, dx+20, dy+20)  # to destination
+        self.animate_packet(sx+20, sy+20, 370, 220)
+        self.animate_packet(370, 220, dx+20, dy+20)
 
         devices[0].send(packet)
 
-        self.log("Delivered to D3")
+        self.log("Delivered to D3\n")
 
     # =========================
-    # SWITCH TEST
+    # SWITCH TEST (UPDATED)
     # =========================
     def test_switch(self):
+        from protocols.noise import add_noise
+        from layers.line_coding import nrz_encode
+
         self.canvas.delete("all")
         self.output.delete(1.0, tk.END)
 
@@ -109,20 +132,32 @@ class NetworkUI:
 
         packet = Packet("S0", "S4", "Hello")
 
-        self.log("Sending via Switch...")
+        # 🔥 ADD-ONS
+        binary = packet.to_binary()
+        signal = nrz_encode(binary)
+        noisy_data = add_noise(packet.data)
 
+        self.log("=== SWITCH TRANSMISSION ===")
+        self.log(f"Original Data: {packet.data}")
+        self.log(f"Binary: {binary}")
+        self.log(f"NRZ Signal: {signal[:20]} ...")
+        self.log(f"After Noise: {noisy_data}")
+
+        # animation
         sx, sy = positions[0]
         dx, dy = positions[4]
 
-        # animation
         self.animate_packet(sx+20, sy+20, 370, 220)
         self.animate_packet(370, 220, dx+20, dy+20)
 
         switch.receive(packet, devices[0])
 
-        self.log("Delivered to S4")
+        self.log("Delivered to S4\n")
 
 
+# =========================
+# MAIN
+# =========================
 if __name__ == "__main__":
     root = tk.Tk()
     app = NetworkUI(root)
